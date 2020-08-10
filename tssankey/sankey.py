@@ -71,7 +71,7 @@ def cwcurve (x_left, x_right, base_left, base_right, height, ax, steps=50, **kwa
     xy = np.array([center_x, center_y]).T
     return matplotlib.patches.Polygon(xy, closed=False, facecolor='none', lw=width, **kwargs)
 
-def tssankey (df, bar_width=0.4, figsize=(12, 8), total_gap=100, ax=None, weights=None):
+def tssankey (df, bar_width=0.4, figsize=(12, 8), total_gap=100, ax=None, weights=None, colors=None):
     # make the sankey plot
     # this one is a little trickier because the bars are not the same in all of them
     if ax is None:
@@ -89,11 +89,24 @@ def tssankey (df, bar_width=0.4, figsize=(12, 8), total_gap=100, ax=None, weight
                 hgt = weights[df[col] == val].sum()
             else:
                 hgt = (df[col] == val).sum()
-            rect = ax.bar([i], [hgt], bottom=base, width=bar_width, color='C4' if i > 0 else None, zorder=10)[0]
+
+            if colors is None:
+                color='C4' if i > 0 else None
+            else:
+                if val in colors:
+                    color = colors[val]
+                else:
+                    color = 'C4'
+
+            rect = ax.bar([i], [hgt], bottom=base, width=bar_width, color=color, zorder=10)[0]
 
             # label it
-            label = f'{val}\n({int(round(hgt / len(df) * 100))}%)'
-            if hgt / len(df) < 0.05:
+            if weights is not None:
+                total = np.sum(weights)
+            else:
+                total = len(df)
+            label = f'{val}\n({int(round(hgt / total * 100))}%)'
+            if hgt / total < 0.05:
                 label = val
             ax.annotate(label,
                         xy=(rect.get_x() + rect.get_width() / 2, rect.get_y() + rect.get_height() / 2),
@@ -112,14 +125,22 @@ def tssankey (df, bar_width=0.4, figsize=(12, 8), total_gap=100, ax=None, weight
         lbases = {k: v for k, v in bases[lcol].items()}
         rbases = {k: v for k, v in bases[rcol].items()}
         for orig_idx, orig_val in enumerate(df[cols[0]].cat.categories):
+            if colors is None or orig_val not in colors:
+                color = f'C{orig_idx}'
+            else:
+                color = colors[orig_val]
+
             for lval in df[lcol].cat.categories:
                 for rval in df[rcol].cat.categories:
-                    count = np.sum((df[cols[0]] == orig_val) & (df[lcol] == lval) & (df[rcol] == rval))
+                    if weights is not None:
+                        count = np.sum(weights[(df[cols[0]] == orig_val) & (df[lcol] == lval) & (df[rcol] == rval)])
+                    else:
+                        count = np.sum((df[cols[0]] == orig_val) & (df[lcol] == lval) & (df[rcol] == rval))
                     if count == 0:
                         continue
                         
                     ax.add_patch(cwcurve(i + bar_width / 2, i + 1 - bar_width / 2, lbases[lval], rbases[rval], count,
-                                         ax=ax, edgecolor=f'C{orig_idx}', alpha=0.25))
+                                         ax=ax, edgecolor=color, alpha=0.25))
 
                     lbases[lval] += count
                     rbases[rval] += count
