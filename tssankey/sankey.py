@@ -146,6 +146,6 @@ def tssankey (df, bar_width=0.4, figsize=(12, 8), total_gap=100, ax=None, weight
                     rbases[rval] += count
         i += 1
 
-    ax.set_xticks([0, 1, 2])
+    ax.set_xticks(np.arange(len(cols)))
     ax.set_xticklabels(cols)
     ax.set_yticks([])
