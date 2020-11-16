@@ -89,6 +89,9 @@ def tssankey(
     ax=None,
     weights=None,
     colors=None,
+    curve_color=None,
+    curve_alpha=0.25,
+    percent_labels=False
 ):
     # make the sankey plot
     # this one is a little trickier because the bars are not the same in all of them
@@ -125,7 +128,10 @@ def tssankey(
                 total = np.sum(weights)
             else:
                 total = len(df)
-            label = f"{val}\n({int(round(hgt / total * 100))}%)"
+            if percent_labels:
+                label = f"{val}\n({int(round(hgt / total * 100))}%)"
+            else:
+                label = val
             if hgt / total < 0.05:
                 label = val
             ax.annotate(
@@ -153,13 +159,15 @@ def tssankey(
         lbases = {k: v for k, v in bases[lcol].items()}
         rbases = {k: v for k, v in bases[rcol].items()}
         for orig_idx, orig_val in enumerate(df[cols[0]].cat.categories):
-            if colors is None or orig_val not in colors:
-                color = f"C{orig_idx}"
-            else:
-                color = colors[orig_val]
-
             for lval in df[lcol].cat.categories:
                 for rval in df[rcol].cat.categories:
+                    if curve_color is not None:
+                        color = curve_color(orig_val, lval, rval)
+                    elif colors is None or orig_val not in colors:
+                        color = f"C{orig_idx}"
+                    else:
+                        color = colors[orig_val]
+
                     if weights is not None:
                         count = np.sum(
                             weights[
@@ -186,7 +194,7 @@ def tssankey(
                             count,
                             ax=ax,
                             edgecolor=color,
-                            alpha=0.25,
+                            alpha=curve_alpha,
                         )
                     )
 
