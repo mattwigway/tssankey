@@ -2,57 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches
 
-# just using fill_between and offsetting curves vertically makes steep curves appear to get
-# thinner in the middle, because you perceive the width of the line perpendicular to its direction
-def cwcurve_poly(
-    x_left, x_right, base_left, base_right, height, xy_ratio=1, steps=50, **kwargs
-):
-    # create the center of the curve
-    # just define one, which we multiply as needed to get the right height
-    # This is just the ys
-    # This uses the smootherstep algorithm: https://en.wikipedia.org/wiki/Smoothstep#Variations
-    center_x = np.linspace(-0.1, 1.1, steps)
-    smoothstepxs = np.clip(center_x, 0, 1)
-    # note that this is 0 when x = 0 and 1 when x = 1
-    smoothstep = 6 * smoothstepxs ** 5 - 15 * smoothstepxs ** 4 + 10 * smoothstepxs ** 3
-    center_x -= np.min(center_x)
-    center_x /= np.max(center_x)
-    center_x *= x_right - x_left
-    center_x += x_left
-    center_y = smoothstep * (base_right - base_left) + base_left + height / 2
-
-    out_x = np.zeros(steps * 2)
-    out_y = np.zeros(steps * 2)
-    xdiff = (center_x[1:] - center_x[:-1]) / xy_ratio  # put in y units
-    ydiff = center_y[1:] - center_y[:-1]
-    ang = (
-        np.arctan2(ydiff, xdiff) + np.pi / 2
-    )  # rotate 90 degrees from direction of line
-    # print(np.degrees(ang))
-    for i, offset in enumerate([height / 2, -height / 2]):
-        # print(i, offset)
-        xoff = (
-            np.array([*(np.cos(ang) * offset), 0]) * xy_ratio
-        )  # handle last offset due to fencepost problem
-        yoff = np.array([*(np.sin(ang) * offset), offset])
-        edge_x = center_x + xoff
-        edge_y = center_y + yoff
-        if i == 1:
-            # reverse this edge so polygon is wound
-            edge_x = edge_x[::-1]
-            edge_y = edge_y[::-1]
-
-        out_x[i * steps : (i + 1) * steps] = edge_x
-        out_y[i * steps : (i + 1) * steps] = edge_y
-
-    xy = np.array([out_x, out_y]).T
-    # return xy, center_x, center_y
-    return matplotlib.patches.Polygon(xy, **kwargs)
-
 
 # just using fill_between and offsetting curves vertically makes steep curves appear to get
 # thinner in the middle, because you perceive the width of the line perpendicular to its direction
-def cwcurve(x_left, x_right, base_left, base_right, height, ax, steps=50, **kwargs):
+def _cwcurve(x_left, x_right, base_left, base_right, height, ax, steps=50, **kwargs):
     # create the center of the curve
     # just define one, which we multiply as needed to get the right height
     # This is just the ys
@@ -91,10 +44,35 @@ def tssankey(
     colors=None,
     curve_color=None,
     curve_alpha=0.25,
-    percent_labels=False
+    percent_labels=True,
 ):
-    # make the sankey plot
-    # this one is a little trickier because the bars are not the same in all of them
+    """
+    Create a Sankey plot. The only required parameter is the data frame which has categorical columns. These are grouped
+    by and summed to create the bars.
+
+    Parameters
+    ----------
+
+    df: pd.DataFrame 
+        A dataframe with one categorical column per time period and one row per observation to show how individuals transition between the categories. Categories do not need to be the same in all columns.
+    bar_width: float
+        The width of the bars, with 1.0 indicating they touch and have no space for the Sankey lines between them. Default 0.4.
+    figsize: tuple
+        Size of the figure to plot, as a tuple (x, y). Default (12, 8).
+    total_gap: float
+        The total vertical gap between all categories in a period. Scale is number of observations. For instance, a value of 100 with five categories will mean that there will be a space equivalent to 25 observations between each category and the next. Default 100.
+    ax: axes
+        axes to plot on. Figsize ignored if specified. Default is to create new axes.
+    weights: pd.Series
+        weights for each observation, parallel to df. Default no weights.
+    colors: dict
+        Map from category names to colors to use for that category. Default is to use colors from the matplotlib style.
+    curve_color: function
+        Function that receives first category, left category, and right category for a curve, and returns a color. Default to use the colors of the first category, as specified by colors or in the style.
+    percent_labels: bool
+        If True, label each category with the percent of the total represented by that category.
+    """
+
     if ax is None:
         f, ax = plt.subplots(figsize=figsize)
 
@@ -186,7 +164,7 @@ def tssankey(
                         continue
 
                     ax.add_patch(
-                        cwcurve(
+                        _cwcurve(
                             i + bar_width / 2,
                             i + 1 - bar_width / 2,
                             lbases[lval],
