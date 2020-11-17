@@ -28,3 +28,6 @@ curve_color: function
 >    Function that receives first category, left category, and right category for a curve, and returns a color. Default to use the colors of the first category, as specified by colors or in the style.
 percent_labels: bool
 >    If True, label each category with the percent of the total represented by that category.
+
+
+This software was written with support from the National Science Foundation, the Center for Teaching Old Models New Tricks at Arizona State University, and the CONVERGE initiave at CU Boulder.
