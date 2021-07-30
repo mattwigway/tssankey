@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches
+import textwrap
 
 
 # just using fill_between and offsetting curves vertically makes steep curves appear to get
@@ -45,6 +46,8 @@ def tssankey(
     curve_color=None,
     curve_alpha=0.25,
     percent_labels=True,
+    min_percent_label=0.05,
+    wrap=0,
 ):
     """
     Create a Sankey plot. The only required parameter is the data frame which has categorical columns. These are grouped
@@ -71,6 +74,10 @@ def tssankey(
         Function that receives first category, left category, and right category for a curve, and returns a color. Default to use the colors of the first category, as specified by colors or in the style.
     percent_labels: bool
         If True, label each category with the percent of the total represented by that category.
+    min_percent_label: float
+        Float between 0 and 1 for minimum proportion for which to show percent labels.
+    wrap: int
+        Wrap labels after this number of characters (default 0 for no wrapping)
     """
 
     if ax is None:
@@ -102,16 +109,18 @@ def tssankey(
             )[0]
 
             # label it
+            wrapval = textwrap.wrap(val, wrap) if wrap > 0 else val
+
             if weights is not None:
                 total = np.sum(weights)
             else:
                 total = len(df)
             if percent_labels:
-                label = f"{val}\n({int(round(hgt / total * 100))}%)"
+                label = f"{wrapval}\n({int(round(hgt / total * 100))}%)"
             else:
-                label = val
-            if hgt / total < 0.05:
-                label = val
+                label = wrapval
+            if hgt / total < min_percent_label:
+                label = wrapval
             ax.annotate(
                 label,
                 xy=(
